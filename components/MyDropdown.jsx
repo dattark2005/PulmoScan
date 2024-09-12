@@ -1,6 +1,5 @@
 import { View, Text, StyleSheet } from 'react-native'
 import React from 'react'
-import { SafeAreaView } from 'react-native-web';
 import { Dropdown } from 'react-native-element-dropdown';
 
 
