@@ -9,18 +9,17 @@ const MyDropdown = ({ data, change }) => {
         <>
             <Dropdown
                 className='w-[40%]'
-                style={[styles.dropdown, isFocus && { borderColor: 'blue' }]}
+                style={[styles.dropdown, isFocus && { borderColor: 'gray' }]}
                 placeholderStyle={styles.placeholderStyle}
                 selectedTextStyle={styles.selectedTextStyle}
                 inputSearchStyle={styles.inputSearchStyle}
                 iconStyle={styles.iconStyle}
                 data={data}
-                search
+                search={false}
                 maxHeight={300}
                 labelField="label"
                 valueField="value"
-                placeholder={!isFocus ? 'Select item' : '...'}
-                searchPlaceholder="Search..."
+                placeholder={!isFocus ? 'Select' : '...'}
                 onFocus={() => setIsFocus(true)}
                 onBlur={() => setIsFocus(false)}
                 onChange={change}
@@ -31,18 +30,19 @@ const MyDropdown = ({ data, change }) => {
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: 'white',
+        backgroundColor: 'blue',
         padding: 16,
     },
     dropdown: {
-        height: 50,
-        borderColor: 'gray',
-        borderWidth: 0.5,
+        height: 40,
+        borderColor: '#786452',
+        borderWidth: 1,
         borderRadius: 8,
-        paddingHorizontal: 8,
+        width: 100,
+        paddingHorizontal: 5,
     },
     icon: {
-        marginRight: 5,
+        marginRight: 0,
     },
     label: {
         position: 'absolute',
