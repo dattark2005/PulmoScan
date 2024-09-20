@@ -1,11 +1,11 @@
 import { Text, View, TextInput, Modal, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Dropdown } from 'react-native-element-dropdown';
-import React from 'react';
+import React, { useState } from 'react';
 import MyText from '../components/MyText';
 import MyButton from '../components/MyButton';
 import detectDisease from '../algorithms/algo';
-import { AuthErrorCodes } from 'firebase/auth';
+import { firebase } from '../config';
 
 const choice = [
     { label: 'Yes', value: true },
@@ -73,61 +73,80 @@ const Index = () => {
         const result = detectDisease(info);
         console.log(result);
         !show ? setShow(true) : setShow(false);
+
+        const timestamp = firebase.firestore.FieldValue.serverTimestamp();
+        const data = {        
+            createdAt: timestamp,   
+            ...info,       
+            diseaseDetected: result,
+        };
+
+        // Save the data to Firebase
+        firebase.firestore().collection('userData')
+            .add(data)
+            .then(() => {
+                console.log('Data saved successfully:', data);
+            })
+            .catch((error) => {
+                console.error('Error saving data:', error);
+                setError('Error saving data to the database.');
+                setModalVisible(true); // Show error in the modal
+            });
     };
 
     const isEmpty = (value) => value === null || value === undefined || value === '';
 
-const handleContinue = () => {
-    let newError = '';
+    const handleContinue = () => {
+        let newError = '';
 
-    // Validation based on current step
-    if (currentStep === 1) {
-        if (isEmpty(info.name) || isEmpty(info.gender) || isEmpty(info.height)) {
-            newError = 'Please fill out all fields.';
+        // Validation based on current step
+        if (currentStep === 1) {
+            if (isEmpty(info.name) || isEmpty(info.gender) || isEmpty(info.height)) {
+                newError = 'Please fill out all fields.';
+            }
+        } else if (currentStep === 2) {
+            if (isEmpty(info.isbreath)) {
+                newError = 'Please answer the question.';
+            } else if (info.isbreath === true && (isEmpty(info.isbreathlong) || isEmpty(info.breathlessAge))) {
+                newError = 'Please answer all questions.';
+            }
+        } else if (currentStep === 3) {
+            if (isEmpty(info.iscough)) {
+                newError = 'Please answer the question.';
+            } else if (info.iscough === true && isEmpty(info.isExpectoration)) {
+                newError = 'Please answer all questions.';
+            }
+        } else if (currentStep === 4 && isEmpty(info.peakflow)) {
+            newError = 'Please fill the peak flow meter reading.';
+        } else if (currentStep === 5) {
+            if (isEmpty(info.agedisease) || isEmpty(info.dosmoke)) {
+                newError = 'Please answer all questions.';
+            } else if (info.dosmoke === true && isEmpty(info.dosmokeyear)) {
+                newError = 'Please answer all questions.';
+            }
+        } else if (currentStep === 6) {
+            if (isEmpty(info.dosmokebiomass)) {
+                newError = 'Please answer the question.';
+            } else if (info.dosmokebiomass === true && isEmpty(info.dosmokeyearduration)) {
+                newError = 'Please write duration of exposure to biomass.';
+            }
+        } else if (currentStep === 7) {
+            if (info.gender === 'Female' && isEmpty(info.isasymptomatic)) {
+                newError = 'Please answer all questions.';
+            }
+            if (isEmpty(info.dorelative)) {
+                newError = 'Please answer the question.';
+            }
         }
-    } else if (currentStep === 2) {
-        if (isEmpty(info.isbreath)) {
-            newError = 'Please answer the question.';
-        } else if (info.isbreath === true && (isEmpty(info.isbreathlong) || isEmpty(info.breathlessAge))) {
-            newError = 'Please answer all questions.';
-        }
-    } else if (currentStep === 3) {
-        if (isEmpty(info.iscough)) {
-            newError = 'Please answer the question.';
-        } else if (info.iscough === true && isEmpty(info.isExpectoration)) {
-            newError = 'Please answer all questions.';
-        }
-    } else if (currentStep === 4 && isEmpty(info.peakflow)) {
-        newError = 'Please fill the peak flow meter reading.';
-    } else if (currentStep === 5) {
-        if (isEmpty(info.agedisease) || isEmpty(info.dosmoke)) {
-            newError = 'Please answer all questions.';
-        } else if (info.dosmoke === true && isEmpty(info.dosmokeyear)) {
-            newError = 'Please answer all questions.';
-        }
-    } else if (currentStep === 6) {
-        if (isEmpty(info.dosmokebiomass)) {
-            newError = 'Please answer the question.';
-        } else if (info.dosmokebiomass === true && isEmpty(info.dosmokeyearduration)) {
-            newError = 'Please write duration of exposure to biomass.';
-        }
-    } else if (currentStep === 7) {
-        if (info.gender === 'Female' && isEmpty(info.isasymptomatic)) {
-            newError = 'Please answer all questions.';
-        }
-        if (isEmpty(info.dorelative)) {
-            newError = 'Please answer the question.';
-        }
-    }
 
-    if (newError) {
-        setError(newError);
-        setModalVisible(true);
-    } else {
-        setError('');
-        setCurrentStep(currentStep + 1);
-    }
-};
+        if (newError) {
+            setError(newError);
+            setModalVisible(true);
+        } else {
+            setError('');
+            setCurrentStep(currentStep + 1);
+        }
+    };
 
     const handlePrev = () => {
         setCurrentStep(currentStep - 1); 
