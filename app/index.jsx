@@ -1,8 +1,8 @@
-import { Text, View, TextInput, ScrollView, StyleSheet } from 'react-native';
+import { Text, View, TextInput, Modal, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Dropdown } from 'react-native-element-dropdown';
 import React from 'react';
 import MyText from '../components/MyText';
-import MyDropdown from '../components/MyDropdown';
 import MyButton from '../components/MyButton';
 import detectDisease from '../algorithms/algo';
 import { AuthErrorCodes } from 'firebase/auth';
@@ -40,8 +40,11 @@ const disease = [
 ]
 
 const Index = () => {
-    const [currentStep, setCurrentStep] = React.useState(1);  // To track current form step
+    const [currentStep, setCurrentStep] = React.useState(1);  
     const [show, setShow] = React.useState(false);
+    const [error, setError] = React.useState('');
+    const [isFocus, setIsFocus] = React.useState(false);
+    const [modalVisible, setModalVisible] = React.useState(false);
     const [info, setInfo] = React.useState({
         name: '',
         gender: '',
@@ -51,17 +54,19 @@ const Index = () => {
         breathlessAge: '',
         iscough: '',
         isExpectoration: '',
+        peakflow: '',
         agedisease: '',
         isasymptomatic: '',
         dosmoke: '',
         dosmokeyear: '',
         dosmokebiomass: '',
         dosmokeyearduration: '',
-        peakflow: ''
+        dorelative: '',
     });
 
     const handleInputChange = (key) => (text) => {
         setInfo({ ...info, [key]: text });
+        
     };
 
     const handleSubmit = () => {
@@ -70,9 +75,59 @@ const Index = () => {
         !show ? setShow(true) : setShow(false);
     };
 
-    const handleContinue = () => {
-        setCurrentStep(currentStep + 1); 
-    };
+    const isEmpty = (value) => value === null || value === undefined || value === '';
+
+const handleContinue = () => {
+    let newError = '';
+
+    // Validation based on current step
+    if (currentStep === 1) {
+        if (isEmpty(info.name) || isEmpty(info.gender) || isEmpty(info.height)) {
+            newError = 'Please fill out all fields.';
+        }
+    } else if (currentStep === 2) {
+        if (isEmpty(info.isbreath)) {
+            newError = 'Please answer the question.';
+        } else if (info.isbreath === true && (isEmpty(info.isbreathlong) || isEmpty(info.breathlessAge))) {
+            newError = 'Please answer all questions.';
+        }
+    } else if (currentStep === 3) {
+        if (isEmpty(info.iscough)) {
+            newError = 'Please answer the question.';
+        } else if (info.iscough === true && isEmpty(info.isExpectoration)) {
+            newError = 'Please answer all questions.';
+        }
+    } else if (currentStep === 4 && isEmpty(info.peakflow)) {
+        newError = 'Please fill the peak flow meter reading.';
+    } else if (currentStep === 5) {
+        if (isEmpty(info.agedisease) || isEmpty(info.dosmoke)) {
+            newError = 'Please answer all questions.';
+        } else if (info.dosmoke === true && isEmpty(info.dosmokeyear)) {
+            newError = 'Please answer all questions.';
+        }
+    } else if (currentStep === 6) {
+        if (isEmpty(info.dosmokebiomass)) {
+            newError = 'Please answer the question.';
+        } else if (info.dosmokebiomass === true && isEmpty(info.dosmokeyearduration)) {
+            newError = 'Please write duration of exposure to biomass.';
+        }
+    } else if (currentStep === 7) {
+        if (info.gender === 'Female' && isEmpty(info.isasymptomatic)) {
+            newError = 'Please answer all questions.';
+        }
+        if (isEmpty(info.dorelative)) {
+            newError = 'Please answer the question.';
+        }
+    }
+
+    if (newError) {
+        setError(newError);
+        setModalVisible(true);
+    } else {
+        setError('');
+        setCurrentStep(currentStep + 1);
+    }
+};
 
     const handlePrev = () => {
         setCurrentStep(currentStep - 1); 
@@ -85,20 +140,44 @@ const Index = () => {
             height: '',
             isbreath: '',
             isbreathlong: '',
+            breathlessAge: '',
             iscough: '',
+            isExpectoration: '',
+            peakflow: '',
             agedisease: '',
             isasymptomatic: '',
             dosmoke: '',
             dosmokeyear: '',
             dosmokebiomass: '',
             dosmokeyearduration: '',
-            peakflow: ''
+            dorelative: '',
         });
-        setCurrentStep(1);  // Reset to step 1
+        setCurrentStep(1);
     };   
 
     return (
         <SafeAreaView>
+            <Modal
+            animationType="slide"
+            transparent={true}
+            visible={modalVisible}
+            onRequestClose={() => {
+                setModalVisible(!modalVisible);
+            }}
+        >
+            <View style={styles.modalContainer}>
+                <View style={styles.modalContent}>
+                    <Text style={styles.modalText}>{error}</Text>
+                    <MyButton
+                        title="OK"
+                        onPress={() => {
+                            setModalVisible(!modalVisible);
+                        }}
+                    />
+                </View>
+            </View>
+        </Modal>
+
                 {/* Step 1: Name, Gender, Height */}
                 {currentStep === 1 && (
                     <View style = {styles.formContainer}>
@@ -109,24 +188,47 @@ const Index = () => {
                                 inputMode="text"
                                 cursorColor="#786452"
                                 placeholder="Enter your name here"
+                                value={info.name}
                                 onChangeText={handleInputChange('name')}
                             />
                         </View>
                         <View style={styles.inputRow}>
                             <MyText>Gender:   </MyText>
-                            <MyDropdown
-                                data={gender}
-                                change={handleInputChange('gender')}
+                            <Dropdown
+                                style={[styles.dropdown, isFocus && { borderColor: 'gray' }]} 
+                                placeholderStyle={styles.placeholderStyle} 
+                                selectedTextStyle={styles.selectedTextStyle}
+                                inputSearchStyle={styles.inputSearchStyle} 
+                                iconStyle={styles.iconStyle} 
+                                data={gender} 
+                                maxHeight={300}
+                                labelField="label"
+                                valueField="value" 
+                                placeholder={!isFocus ? 'Select' : '...'}
+                                value={info.gender} 
+                                onFocus={() => setIsFocus(true)} 
+                                onBlur={() => setIsFocus(false)} 
+                                onChange={item => {
+                                    handleInputChange('gender')(item.value); // Update state with selected value
+                                }}
                             />
                         </View>
                         <View style={styles.inputRow}>
                             <MyText>Height:   </MyText>
                             <TextInput
                                 style={styles.inputField}
-                                inputMode="text"
+                                inputMode="numeric"
                                 cursorColor="#786452"
+                                value={info.height}
                                 placeholder="Enter your height (in cm)"
-                                onChangeText={handleInputChange('height')}
+                                onChangeText={(text) => {
+                                    const numericValue = text.replace(/[^0-9.]/g, '');
+                                    const validValue = numericValue.split('.').length > 2 
+                                        ? numericValue.substring(0, numericValue.lastIndexOf('.')) 
+                                        : numericValue;
+                                    
+                                    handleInputChange('height')(validValue);
+                                }}
                             />
                         </View>
                         <MyButton title="Continue" onPress={handleContinue} />
@@ -138,30 +240,61 @@ const Index = () => {
                     <View style = {styles.formContainer}>
                         <View style={styles.inputRow}>
                             <MyText>Do you have Breathlessness?     </MyText>
-                            <MyDropdown
-                                data={choice}
-                                change={handleInputChange('isbreath')}
+                            <Dropdown
+                                style={[styles.dropdown, isFocus && { borderColor: 'gray' }]} 
+                                placeholderStyle={styles.placeholderStyle} 
+                                selectedTextStyle={styles.selectedTextStyle}
+                                inputSearchStyle={styles.inputSearchStyle} 
+                                iconStyle={styles.iconStyle} 
+                                data={choice} 
+                                maxHeight={300}
+                                labelField="label"
+                                valueField="value" 
+                                placeholder={!isFocus ? 'Select' : '...'}
+                                value={info.isbreath} 
+                                onFocus={() => setIsFocus(true)} 
+                                onBlur={() => setIsFocus(false)} 
+                                onChange={item => {
+                                    handleInputChange('isbreath')(item.value); // Update state with selected value
+                                }}
                             />
                         </View>
-                        {/* {info.isbreath === true && ( */}
-                            <View style={styles.inputRow}>
-                                <MyText>If yes, for how long?     </MyText>
-                                <MyDropdown
-                                    data={breathLong}
-                                    change={handleInputChange('isbreathlong')}
-                                />
-                            </View>
-                            <View style={styles.inputRow}>
-                                <MyText>From what age?     </MyText>
-                                <TextInput
-                                    style={styles.sInputField}
-                                    inputMode="text"
-                                    cursorColor="#786452"
-                                    placeholder="Age in years"
-                                    onChangeText={handleInputChange('breathlessAge')}
-                                />
-                            </View>
-                        {/* )} */}
+                        {info.isbreath === true && (
+                            <>
+                                <View style={styles.inputRow}>
+                                    <MyText>For how long?     </MyText>
+                                    <Dropdown
+                                        style={[styles.dropdown, isFocus && { borderColor: 'gray' }]} 
+                                        placeholderStyle={styles.placeholderStyle} 
+                                        selectedTextStyle={styles.selectedTextStyle}
+                                        inputSearchStyle={styles.inputSearchStyle} 
+                                        iconStyle={styles.iconStyle} 
+                                        data={breathLong} 
+                                        maxHeight={300}
+                                        labelField="label"
+                                        valueField="value" 
+                                        placeholder={!isFocus ? 'Select' : '...'}
+                                        value={info.isbreathlong} 
+                                        onFocus={() => setIsFocus(true)} 
+                                        onBlur={() => setIsFocus(false)} 
+                                        onChange={item => {
+                                            handleInputChange('isbreathlong')(item.value); // Update state with selected value
+                                        }}
+                                    />
+                                </View>
+                                <View style={styles.inputRow}>
+                                    <MyText>From what age?     </MyText>
+                                    <TextInput
+                                        style={styles.sInputField}
+                                        inputMode="numeric"
+                                        cursorColor="#786452"
+                                        value={info.breathlessAge}
+                                        placeholder="Age in years"
+                                        onChangeText={handleInputChange('breathlessAge')}
+                                    />
+                                </View>
+                            </>
+                        )}
                         <MyButton title="Continue" color="#00f2f2" onPress={handleContinue} />
                         <MyButton title="Previous" color="#00f2f2" onPress={handlePrev} />
                     </View>
@@ -172,18 +305,50 @@ const Index = () => {
                     <View style = {styles.formContainer}>
                         <View style={styles.inputRow}>
                             <MyText>Do you have a Cough?    </MyText>
-                            <MyDropdown
-                                data={choice}
-                                change={handleInputChange('iscough')}
+                            <Dropdown
+                                style={[styles.dropdown, isFocus && { borderColor: 'gray' }]} 
+                                placeholderStyle={styles.placeholderStyle} 
+                                selectedTextStyle={styles.selectedTextStyle}
+                                inputSearchStyle={styles.inputSearchStyle} 
+                                iconStyle={styles.iconStyle} 
+                                data={choice} 
+                                maxHeight={300}
+                                labelField="label"
+                                valueField="value" 
+                                placeholder={!isFocus ? 'Select' : '...'}
+                                value={info.iscough} 
+                                onFocus={() => setIsFocus(true)} 
+                                onBlur={() => setIsFocus(false)} 
+                                onChange={item => {
+                                    handleInputChange('iscough')(item.value); // Update state with selected value
+                                }}
                             />
                         </View>
-                        <View style={styles.inputRow}>
-                            <MyText>If yes, with expectoration?   </MyText>
-                            <MyDropdown
-                                data={choice}
-                                change={handleInputChange('isExpectoration')}
-                            />
-                        </View>
+                        {info.iscough === true && (
+                            <>
+                            <View style={styles.inputRow}>
+                                <MyText>Does your cough have expectoration(mucus/phlegm)?   </MyText>
+                                <Dropdown
+                                    style={[styles.dropdown, isFocus && { borderColor: 'gray' }]} 
+                                    placeholderStyle={styles.placeholderStyle} 
+                                    selectedTextStyle={styles.selectedTextStyle}
+                                    inputSearchStyle={styles.inputSearchStyle} 
+                                    iconStyle={styles.iconStyle} 
+                                    data={choice} 
+                                    maxHeight={300}
+                                    labelField="label"
+                                    valueField="value" 
+                                    placeholder={!isFocus ? 'Select' : '...'}
+                                    value={info.isExpectoration} 
+                                    onFocus={() => setIsFocus(true)} 
+                                    onBlur={() => setIsFocus(false)} 
+                                    onChange={item => {
+                                        handleInputChange('isExpectoration')(item.value); // Update state with selected value
+                                    }}
+                                />
+                            </View>
+                            </>
+                        )}
                         <MyButton title="Continue" color="#00f2f2" onPress={handleContinue} />
                         <MyButton title="Previous" color="#00f2f2" onPress={handlePrev} />
                     </View>
@@ -193,17 +358,13 @@ const Index = () => {
                 {currentStep === 4 && (
                    <View style = {styles.formContainer}>
                         <Text style={styles.headerText}>Peak Flow Meter Reading</Text>
-                            {/* <MyDropdown
-                                data={peakFlow}
-                                change={handleInputChange('peakflow')}
-                            /> */}
                             <TextInput
                                 style={styles.peakIn}
                                 inputMode='numeric'
                                 cursorColor='#786452'
+                                value={info.peakflow}
                                 onChangeText={(text) => {
                                     const numericValue = text.replace(/[^0-9.]/g, '');
-                                    
                                     const validValue = numericValue.split('.').length > 2 
                                         ? numericValue.substring(0, numericValue.lastIndexOf('.')) 
                                         : numericValue;
@@ -221,35 +382,67 @@ const Index = () => {
                     <View style = {styles.formContainer}>
                         <View style={styles.inputRow}>
                             <MyText>Age of onset of symptoms?(Consider the earliest age)        </MyText>
-                            <MyDropdown
-                                data={ageDisease}
-                                change={handleInputChange('agedisease')}
+                            <Dropdown
+                                style={[styles.dropdown, isFocus && { borderColor: 'gray' }]} 
+                                placeholderStyle={styles.placeholderStyle} 
+                                selectedTextStyle={styles.selectedTextStyle}
+                                inputSearchStyle={styles.inputSearchStyle} 
+                                iconStyle={styles.iconStyle} 
+                                data={ageDisease} 
+                                maxHeight={300}
+                                labelField="label"
+                                valueField="value" 
+                                placeholder={!isFocus ? 'Select' : '...'}
+                                value={info.agedisease} 
+                                onFocus={() => setIsFocus(true)} 
+                                onBlur={() => setIsFocus(false)} 
+                                onChange={item => {
+                                    handleInputChange('agedisease')(item.value); // Update state with selected value
+                                }}
                             />
                         </View>
                         <View style={styles.inputRow}>
                             <MyText>Do you smoke?       </MyText>
-                            <MyDropdown
-                                data={choice}
-                                change={handleInputChange('dosmoke')}
-                            />
-                        </View>
-                        <View style={styles.inputRow}>
-                            <MyText className='h-8'>If yes, how many packs per year?     </MyText>
-                            <TextInput
-                                style={styles.numInput}
-                                inputMode='numeric'
-                                cursorColor='#786452'
-                                onChangeText={(text) => {
-                                    const numericValue = text.replace(/[^0-9.]/g, '');
-                                    
-                                    const validValue = numericValue.split('.').length > 2 
-                                        ? numericValue.substring(0, numericValue.lastIndexOf('.')) 
-                                        : numericValue;
-                                    
-                                    handleInputChange('dosmokeyear')(validValue);
+                            <Dropdown
+                                style={[styles.dropdown, isFocus && { borderColor: 'gray' }]} 
+                                placeholderStyle={styles.placeholderStyle} 
+                                selectedTextStyle={styles.selectedTextStyle}
+                                inputSearchStyle={styles.inputSearchStyle} 
+                                iconStyle={styles.iconStyle} 
+                                data={choice} 
+                                maxHeight={300}
+                                labelField="label"
+                                valueField="value" 
+                                placeholder={!isFocus ? 'Select' : '...'}
+                                value={info.dosmoke} 
+                                onFocus={() => setIsFocus(true)} 
+                                onBlur={() => setIsFocus(false)} 
+                                onChange={item => {
+                                    handleInputChange('dosmoke')(item.value); // Update state with selected value
                                 }}
                             />
-                        </View> 
+                        </View>
+                        {info.dosmoke === true && (
+                            <>
+                            <View style={styles.inputRow}>
+                                <MyText className='h-8'>How many packs per year?     </MyText>
+                                <TextInput
+                                    style={styles.numInput}
+                                    inputMode='numeric'
+                                    cursorColor='#786452'
+                                    value={info.dosmokeyear}
+                                    onChangeText={(text) => {
+                                        const numericValue = text.replace(/[^0-9.]/g, '');
+                                        const validValue = numericValue.split('.').length > 2 
+                                            ? numericValue.substring(0, numericValue.lastIndexOf('.')) 
+                                            : numericValue;
+                                        
+                                        handleInputChange('dosmokeyear')(validValue);
+                                    }}                                    
+                                />
+                            </View> 
+                            </>
+                        )}
                         <MyButton title="Continue" color="#00f2f2" onPress={handleContinue} />
                         <MyButton title="Previous" color="#00f2f2" onPress={handlePrev} />
                     </View>
@@ -259,20 +452,39 @@ const Index = () => {
                     <View style = {styles.formContainer}>
                         <View style={styles.inputRow}>
                             <MyText>Were you exposed to biomass smoke while cooking?    </MyText>
-                            <MyDropdown
-                                data={choice}
-                                change={handleInputChange('dosmokebiomass')}
+                            <Dropdown
+                                style={[styles.dropdown, isFocus && { borderColor: 'gray' }]} 
+                                placeholderStyle={styles.placeholderStyle} 
+                                selectedTextStyle={styles.selectedTextStyle}
+                                inputSearchStyle={styles.inputSearchStyle} 
+                                iconStyle={styles.iconStyle} 
+                                data={choice} 
+                                maxHeight={300}
+                                labelField="label"
+                                valueField="value" 
+                                placeholder={!isFocus ? 'Select' : '...'}
+                                value={info.dosmokebiomass} 
+                                onFocus={() => setIsFocus(true)} 
+                                onBlur={() => setIsFocus(false)} 
+                                onChange={item => {
+                                    handleInputChange('dosmokebiomass')(item.value); // Update state with selected value
+                                }}
                             />
                         </View>
-                        <View style={styles.inputRow}>
-                            <MyText>If yes, total duration of exposure:     </MyText>
-                            <TextInput
-                                style={styles.numInput}
-                                inputMode='numeric'
-                                cursorColor='#786452'
-                                onChangeText={handleInputChange('dosmokeyearduration')}
-                            />
-                        </View> 
+                        {info.dosmokebiomass === true && (
+                            <>
+                            <View style={styles.inputRow}>
+                                <MyText>Total duration of exposure:     </MyText>
+                                <TextInput
+                                    style={styles.numInput}
+                                    inputMode='numeric'
+                                    cursorColor='#786452'
+                                    value={info.dosmokeyearduration}
+                                    onChangeText={handleInputChange('dosmokeyearduration')}
+                                />
+                            </View> 
+                            </>
+                        )}
                         <MyButton title="Continue" color="#00f2f2" onPress={handleContinue} />
                         <MyButton title="Previous" color="#00f2f2" onPress={handlePrev} />
                     </View>
@@ -280,20 +492,50 @@ const Index = () => {
 
                 {currentStep === 7 && (
                     <View style = {styles.formContainer}>
-                        {/* {gender === 'Female' && ( */}
+                        {info.gender === 'Female' && (
+                            <>
                             <View style = {styles.inputRow}>
                                 <MyText>Do you get asymptomatic periods(i.e.&gt; 7 days)?               </MyText>
-                                <MyDropdown
-                                    data={choice}
-                                    change={handleInputChange('isasymptomatic')}
+                                <Dropdown
+                                    style={[styles.dropdown, isFocus && { borderColor: 'gray' }]} 
+                                    placeholderStyle={styles.placeholderStyle} 
+                                    selectedTextStyle={styles.selectedTextStyle}
+                                    inputSearchStyle={styles.inputSearchStyle} 
+                                    iconStyle={styles.iconStyle} 
+                                    data={choice} 
+                                    maxHeight={300}
+                                    labelField="label"
+                                    valueField="value" 
+                                    placeholder={!isFocus ? 'Select' : '...'}
+                                    value={info.isasymptomatic} 
+                                    onFocus={() => setIsFocus(true)} 
+                                    onBlur={() => setIsFocus(false)} 
+                                    onChange={item => {
+                                        handleInputChange('isasymptomatic')(item.value); // Update state with selected value
+                                    }}
                                 />
                             </View>
-                        {/* )} */}
+                            </>
+                        )}
                         <View style = {styles.inputRow}>
                             <MyText>Does anyone in your family have history of atopy?</MyText>
-                            <MyDropdown
-                                data={disease}
-                                change={handleInputChange('dorelative')}
+                            <Dropdown
+                                style={[styles.dropdown, isFocus && { borderColor: 'gray' }]} 
+                                placeholderStyle={styles.placeholderStyle} 
+                                selectedTextStyle={styles.selectedTextStyle}
+                                inputSearchStyle={styles.inputSearchStyle} 
+                                iconStyle={styles.iconStyle} 
+                                data={disease} 
+                                maxHeight={300}
+                                labelField="label"
+                                valueField="value" 
+                                placeholder={!isFocus ? 'Select' : '...'}
+                                value={info.dorelative} 
+                                onFocus={() => setIsFocus(true)} 
+                                onBlur={() => setIsFocus(false)} 
+                                onChange={item => {
+                                    handleInputChange('dorelative')(item.value); // Update state with selected value
+                                }}
                             />
                         </View>
                         <MyButton title="Get Result" color="#00f2f2"  onPress={() => {
@@ -393,6 +635,68 @@ const styles = StyleSheet.create({
         color: '#000',            
         textAlign: 'center',      
         marginVertical: 30,       
+    },
+    errorText: {
+        color: 'red',
+        marginBottom: 10,
+        textAlign: 'center',
+    },
+    modalContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)', 
+    },
+    modalContent: {
+        width: '80%',
+        padding: 20,
+        backgroundColor: 'white',
+        borderRadius: 10,
+        alignItems: 'center',
+    },
+    modalText: {
+        marginBottom: 15,
+        textAlign: 'center',
+        fontSize: 18,
+    },
+    // dropdown
+    container: {
+        backgroundColor: 'blue',
+        padding: 16,
+    },
+    dropdown: {
+        height: 40,
+        borderColor: '#786452',
+        borderWidth: 1,
+        borderRadius: 8,
+        width: 100,
+        paddingHorizontal: 5,
+    },
+    icon: {
+        marginRight: 0,
+    },
+    label: {
+        position: 'absolute',
+        backgroundColor: 'white',
+        left: 22,
+        top: 8,
+        zIndex: 999,
+        paddingHorizontal: 8,
+        fontSize: 14,
+    },
+    placeholderStyle: {
+        fontSize: 16,
+    },
+    selectedTextStyle: {
+        fontSize: 16,
+    },
+    iconStyle: {
+        width: 20,
+        height: 20,
+    },
+    inputSearchStyle: {
+        height: 40,
+        fontSize: 16,
     },
 });
 
