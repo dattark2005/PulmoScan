@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "fireAdd",
-    "slug": "fireAdd",
+    "name": "PulmoScan",
+    "slug": "PulmoScan",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -15,6 +15,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.example.pulmoscan",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
