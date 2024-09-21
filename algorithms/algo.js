@@ -5,6 +5,8 @@ export default function detectDisease({
     iscough,
     isExpectoration,
     peakflow,
+    pef,
+    pefPercentage,
     agedisease,
     isasymptomatic,
     dosmoke,

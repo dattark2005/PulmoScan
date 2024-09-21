@@ -1,4 +1,4 @@
-import { Text, View, TextInput, Modal, StyleSheet } from 'react-native';
+import { Text, View, TextInput, Modal, StyleSheet, Image  } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Dropdown } from 'react-native-element-dropdown';
 import React, { useState } from 'react';
@@ -213,6 +213,13 @@ const Index = () => {
 
     return (
         <SafeAreaView>
+            {/* Header */}
+            <View style={styles.headerContainer}>
+                <Image source={require('../assets/icon.png')} style={styles.logo} />
+                <Image source={require('../assets/appName.png')} style={styles.logoName} />
+            </View>
+
+            {/* Error Modal */}
             <Modal
             animationType="slide"
             transparent={true}
@@ -800,6 +807,41 @@ const styles = StyleSheet.create({
     inputSearchStyle: {
         height: 40,
         fontSize: 16,
+    },
+    // Header
+    headerContainer: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        flexDirection: 'row', 
+        alignItems: 'center',
+        justifyContent: 'left',
+        paddingHorizontal: 15,
+        paddingTop: 40,
+        paddingBottom: 15,
+        borderRadius: 15,
+        backgroundColor: '#f2f2f2',
+        zIndex: 1,
+        // shadow
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 3,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.5,  
+        elevation: 5,
+    },
+    logo: {
+        width: 50,
+        height: 50,
+        resizeMode: 'contain',
+    },
+    logoName: {
+        width: 200,
+        height: 50,
+        resizeMode: 'contain',
     },
 });
 
