@@ -45,9 +45,11 @@ const Index = () => {
     const [error, setError] = React.useState('');
     const [isFocus, setIsFocus] = React.useState(false);
     const [modalVisible, setModalVisible] = React.useState(false);
+
     const [info, setInfo] = React.useState({
         name: '',
         gender: '',
+        age: '',
         height: '',
         isbreath: '',
         isbreathlong: '',
@@ -55,6 +57,8 @@ const Index = () => {
         iscough: '',
         isExpectoration: '',
         peakflow: '',
+        pef: '',
+        pefPercentage: '',
         agedisease: '',
         isasymptomatic: '',
         dosmoke: '',
@@ -118,19 +122,19 @@ const Index = () => {
             }
         } else if (currentStep === 4 && isEmpty(info.peakflow)) {
             newError = 'Please fill the peak flow meter reading.';
-        } else if (currentStep === 5) {
+        } else if (currentStep === 6) {
             if (isEmpty(info.agedisease) || isEmpty(info.dosmoke)) {
                 newError = 'Please answer all questions.';
             } else if (info.dosmoke === true && isEmpty(info.dosmokeyear)) {
                 newError = 'Please answer all questions.';
             }
-        } else if (currentStep === 6) {
+        } else if (currentStep === 7) {
             if (isEmpty(info.dosmokebiomass)) {
                 newError = 'Please answer the question.';
             } else if (info.dosmokebiomass === true && isEmpty(info.dosmokeyearduration)) {
                 newError = 'Please write duration of exposure to biomass.';
             }
-        } else if (currentStep === 7) {
+        } else if (currentStep === 8) {
             if (info.gender === 'Female' && isEmpty(info.isasymptomatic)) {
                 newError = 'Please answer all questions.';
             }
@@ -156,6 +160,7 @@ const Index = () => {
         setInfo({
             name: '',
             gender: '',
+            age: '',
             height: '',
             isbreath: '',
             isbreathlong: '',
@@ -163,6 +168,8 @@ const Index = () => {
             iscough: '',
             isExpectoration: '',
             peakflow: '',
+            pef: '',
+            pefPercentage: '',
             agedisease: '',
             isasymptomatic: '',
             dosmoke: '',
@@ -172,7 +179,37 @@ const Index = () => {
             dorelative: '',
         });
         setCurrentStep(1);
-    };   
+    };
+    
+    const calculatePEF = () => {
+        const ageNum = parseFloat(info.age);
+        const heightNum = parseFloat(info.height);
+
+        let pefVal = 0;
+        if (info.gender === 'Male') {
+            pefVal = -1.807 * ageNum + 3.206 * heightNum;
+        } else if (info.gender === 'Female') {
+            pefVal = -1.454 * ageNum + 2.368 * heightNum;
+        }
+        pefVal = pefVal.toFixed(2);
+        setInfo({ ...info, pef: pefVal });
+        return info.pef;
+    };
+
+    // Function to calculate percentage of the PEF
+    const calculatePercentage = (pef) => {
+        const peakFlowNum = parseFloat(info.peakflow);
+        if (pef && peakFlowNum) {
+            let percentage = (peakFlowNum / pef) * 100;
+            percentage = percentage.toFixed(2);
+            setInfo({ ...info, pefPercentage: percentage });
+        }
+    };
+
+    const handleCalculate = () => {
+        calculatePEF();
+        calculatePercentage(info.pef);
+    };
 
     return (
         <SafeAreaView>
@@ -229,6 +266,24 @@ const Index = () => {
                                 onBlur={() => setIsFocus(false)} 
                                 onChange={item => {
                                     handleInputChange('gender')(item.value); // Update state with selected value
+                                }}
+                            />
+                        </View>
+                        <View style={styles.inputRow}>
+                            <MyText>Age:   </MyText>
+                            <TextInput
+                                style={styles.inputField}
+                                inputMode="numeric"
+                                cursorColor="#786452"
+                                value={info.age}
+                                placeholder="Enter your age (in yrs)"
+                                onChangeText={(text) => {
+                                    const numericValue = text.replace(/[^0-9.]/g, '');
+                                    const validValue = numericValue.split('.').length > 2 
+                                        ? numericValue.substring(0, numericValue.lastIndexOf('.')) 
+                                        : numericValue;
+                                    
+                                    handleInputChange('age')(validValue);
                                 }}
                             />
                         </View>
@@ -339,7 +394,7 @@ const Index = () => {
                                 onFocus={() => setIsFocus(true)} 
                                 onBlur={() => setIsFocus(false)} 
                                 onChange={item => {
-                                    handleInputChange('iscough')(item.value); // Update state with selected value
+                                    handleInputChange('iscough')(item.value); 
                                 }}
                             />
                         </View>
@@ -362,7 +417,7 @@ const Index = () => {
                                     onFocus={() => setIsFocus(true)} 
                                     onBlur={() => setIsFocus(false)} 
                                     onChange={item => {
-                                        handleInputChange('isExpectoration')(item.value); // Update state with selected value
+                                        handleInputChange('isExpectoration')(item.value);
                                     }}
                                 />
                             </View>
@@ -391,13 +446,36 @@ const Index = () => {
                                     handleInputChange('peakflow')(validValue);
                                 }}
                             />
-                        <MyButton title="Continue" color="#00f2f2" onPress={handleContinue} />
+                        <MyButton title="Calculate PEF percentage" color="#00f2f2" onPress={() => {
+                                                            handleCalculate();
+                                                            handleContinue(); 
+                                                        }} />
                         <MyButton title="Previous" color="#00f2f2" onPress={handlePrev} />
                    </View> 
                 )}
 
-                {/* Step 4: Age of Disease Onset, Smoking */}
+                {/* To display PEF percentage */}
                 {currentStep === 5 && (
+                    <View style = {styles.formContainer}>
+                        <View style={{ marginBottom: 25 }}>
+                            <View>
+                            <Text style={styles.subheaderText}>Your PEF is:</Text>
+                            <Text style={styles.headerText}>{info.pef || 'N/A'}</Text>
+                            </View>
+                        </View>
+                        <View style={{ marginBottom: 25 }}>
+                            <View>
+                            <Text style={styles.subheaderText}>Your PEF percentage:</Text>
+                            <Text style={styles.headerText}>{info.pefPercentage ? `${info.pefPercentage}%` : 'N/A'}</Text>
+                            </View>
+                        </View>
+                        <MyButton title="Continue" color="#00f2f2" onPress={handleContinue} />
+                        <MyButton title="Previous" color="#00f2f2" onPress={handlePrev} />
+                    </View>
+                )}
+
+                {/* Age of Disease Onset, Smoking */}
+                {currentStep === 6 && (
                     <View style = {styles.formContainer}>
                         <View style={styles.inputRow}>
                             <MyText>Age of onset of symptoms?(Consider the earliest age)        </MyText>
@@ -467,7 +545,7 @@ const Index = () => {
                     </View>
                 )}
 
-                {currentStep === 6 && (
+                {currentStep === 7 && (
                     <View style = {styles.formContainer}>
                         <View style={styles.inputRow}>
                             <MyText>Were you exposed to biomass smoke while cooking?    </MyText>
@@ -509,7 +587,7 @@ const Index = () => {
                     </View>
                 )}
 
-                {currentStep === 7 && (
+                {currentStep === 8 && (
                     <View style = {styles.formContainer}>
                         {info.gender === 'Female' && (
                             <>
@@ -566,7 +644,7 @@ const Index = () => {
                 )}
 
                 {/* Final: Show Result */}
-                {currentStep === 8 && (
+                {currentStep === 9 && (
                     <View style = {styles.formContainer}>
                         <View className="flex-row space-x-2 items-center justify-center">
                             {show && <Text id="result" style={styles.result}>Result = {detectDisease(info)}</Text>}
@@ -609,6 +687,12 @@ const styles = StyleSheet.create({
         fontWeight: '800',
         fontStyle: 'italic'
     },
+    subheaderText: {
+        alignSelf:'center',
+        fontSize: 20,
+        fontWeight: '700',
+        fontStyle: 'italic'
+    },  
     inputField: {
         width: '100%', 
         height: 40,

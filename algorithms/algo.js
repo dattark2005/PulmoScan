@@ -23,6 +23,10 @@ export default function detectDisease({
         return 'Unlikely to have Asthma or COPD';
     }
 
+    if(parseFloat(pefPercentage) >= 80) {
+        return 'No clinically relevant asthma or COPD';
+    }
+
     // If the age of the disease isn't specified
     if (!agedisease.value) {
         return 'Likely to have asthma, unlikely to have COPD';
